@@ -1021,6 +1021,7 @@ def fix_missing_s3
 
       fixed_upload = nil
       fix_error = nil
+      original_sha1 = upload.sha1
       Upload.transaction do
         begin
           upload.update!(sha1: SecureRandom.hex)
@@ -1036,7 +1037,12 @@ def fix_missing_s3
       else
         # we do not fix sha, it may be wrong for arbitrary reasons, if we correct it
         # we may end up breaking posts
-        upload.update!(etag: fixed_upload.etag, url: fixed_upload.url, verification_status: Upload.verification_statuses[:unchecked])
+        upload.update!(
+          sha1: original_sha1,
+          etag: fixed_upload.etag,
+          url: fixed_upload.url,
+          verification_status: Upload.verification_statuses[:unchecked]
+        )
 
         OptimizedImage.where(upload_id: upload.id).destroy_all
         rebake_ids = PostUpload.where(upload_id: upload.id).pluck(:post_id)
